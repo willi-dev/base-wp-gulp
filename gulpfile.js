@@ -12,6 +12,7 @@ var notify 	 = require( 'gulp-notify' );
 var livereload = require( 'gulp-livereload' );
 var minifyCSS = require( 'gulp-minify-css' );
 var rename = require('gulp-rename');
+var copy = require('gulp-copy');
 
 var source = 'src/', 
 	dest = 'dist/';
@@ -34,11 +35,12 @@ var scss = {
 		presicion: 3,
 		errLogToConsole: true,
 		includePaths: [bootstrapSass.in + 'assets/stylesheets' ]
-	}
+	},
+	outputFile: dest + 'css/twcx-styles.css',
 };
 
-
-var plumberErrorHandler = { errorHandler: notify.onError({
+var plumberErrorHandler = { 
+	errorHandler: notify.onError({
 		title: 'Gulp',
 		message: 'Error: <%= error.message %>'
 	})
@@ -51,33 +53,30 @@ gulp.task( 'fonts', function(){
 		.pipe(gulp.dest(fonts.out));
 });	
 
-
 /* task : sass compile */
 gulp.task( 'sass', ['fonts'], function() {
-	// gulp.src( source + 'scss/**/*.scss' )
-	// 	// .pipe( plumber(plumberErrorHandler))
-	// 	.pipe( sass().on('error', sass.logError))
-	// 	.pipe( minifyCSS() )
-	// 	.pipe( concat( 'twcx-styles.css' ))
-	// 	// .pipe( rename({
-	// 	// 	basename: 'twcx-styles',
-	// 	// 	extname: '.min.css',
-	// 	// }))
-	// 	.pipe( gulp.dest( desct + 'css' ) )
-	// 	.pipe( livereload() );
 	return gulp.src( scss.in )
+		// 	// .pipe( plumber(plumberErrorHandler))
 		.pipe( sass( scss.sassOpts ) )
-		// .pipe( minifyCSS() )
 		.pipe( gulp.dest( scss.out ) )
+		.pipe( gulp.copy() )
 		.pipe( livereload() );
+});
+
+/* minify output sass / css */
+gulp.task( 'minifycss', function(){
+	return gulp.src( scss.outputFile )
+		.pipe( minifyCSS() )
+		.pipe( rename({ suffix: '.min' } ) )
+		.pipe( gulp.dest( scss.out ) );
 });
 
 /* task : js hint */
 gulp.task( 'js', function() {
-	gulp.src( './src/js/*.js' )
+	gulp.src( [ './node_modules/bootstrap-sass/assets/javascripts/bootstrap.min.js' , './src/js/*.js'] )
 		.pipe( plumber(plumberErrorHandler))
-		.pipe( jshint() )
-		.pipe( jshint.reporter( 'fail' ) )
+		// .pipe( jshint() )
+		// .pipe( jshint.reporter( 'fail' ) )
 		.pipe( concat( 'twcx-scripts.js' ) )
 		.pipe( gulp.dest( './dist/js' ) )
 		.pipe( livereload() );
