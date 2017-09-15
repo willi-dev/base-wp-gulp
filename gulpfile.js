@@ -2,23 +2,31 @@
  * gulpfile.js
  * gulp file for development
  */
-var gulp 	 = require( 'gulp' );
-var sass 	 = require( 'gulp-sass' );
-var jshint 	 = require( 'gulp-jshint' );
-var concat 	 = require( 'gulp-concat' );
-var imagemin = require( 'gulp-imagemin' );
-var plumber	 = require( 'gulp-plumber' );
-var notify 	 = require( 'gulp-notify' );
-var livereload = require( 'gulp-livereload' );
-var minifyCSS = require( 'gulp-minify-css' );
-var rename = require('gulp-rename');
-var copy = require('gulp-copy');
+var gulp 	 	= require( 'gulp' ),
+	sass 	 	= require( 'gulp-sass' ),
+	jshint 	 	= require( 'gulp-jshint' ),
+	uglify		= require( 'gulp-uglify' ),
+	concat 	 	= require( 'gulp-concat' ),
+	imagemin 	= require( 'gulp-imagemin' ),
+	plumber	 	= require( 'gulp-plumber' ),
+	notify 	 	= require( 'gulp-notify' ),
+	livereload 	= require( 'gulp-livereload' ),
+	minifyCSS 	= require( 'gulp-minify-css' ),
+	rename 		= require( 'gulp-rename' ),
+	copy 		= require( 'gulp-copy' );
 
-var source = 'src/', 
-	dest = 'dist/';
+var filePrefix = 'twcx', // you can change with your prefix
+	fileCSS 		= filePrefix + '-styles',
+	fileCSSOutput 	= fileCSS + '.css',
+	fileSCSSOutput 	= fileCSS + '.scss',
+	fileJS 			= filePrefix + '-scripts',
+	fileJSOutput	= fileJS + '.js'; 
+
+var source = 'assets/src/', 
+	dest = 'assets/dist/';
 
 var bootstrapSass = {
-	in: './node_modules/bootstrap-sass/'
+	in: './node_modules/bootstrap-sass/',
 };
 
 var fonts = {
@@ -27,17 +35,26 @@ var fonts = {
 };
 
 var scss = {
-	in: source + 'scss/twcx-styles.scss',
+	in: source + 'scss/' + fileSCSSOutput,
 	out: dest + 'css/',
+	outCss: source + 'css/',
 	watch: source + 'scss/**/*',
 	sassOpts: {
-		outputStyle: 'nested',
+		outputStyle: 'expanded',
 		presicion: 3,
 		errLogToConsole: true,
 		includePaths: [bootstrapSass.in + 'assets/stylesheets' ]
 	},
-	outputFile: dest + 'css/twcx-styles.css',
+	outputFile: dest + 'css/' + fileCSSOutput,
 };
+
+var js = {
+	in: source + 'js/theme/*.js',
+	out: dest + 'js/',
+	outJsSource: source + 'js/',
+	watch: source + 'js/theme/*.js',
+	bootstrap: bootstrapSass.in + 'assets/javascripts/bootstrap.min.js',
+}
 
 var plumberErrorHandler = { 
 	errorHandler: notify.onError({
@@ -46,60 +63,71 @@ var plumberErrorHandler = {
 	})
 };
 
-/* task : copy fonts to dist */	
+/** 
+ * task : copy fonts from src to dist 
+ */	
 gulp.task( 'fonts', function(){
 	return gulp
 		.src(fonts.in)
 		.pipe(gulp.dest(fonts.out));
 });	
 
-/* task : sass compile */
+/** 
+ * task : sass compile 
+ */
 gulp.task( 'sass', ['fonts'], function() {
 	return gulp.src( scss.in )
-		// 	// .pipe( plumber(plumberErrorHandler))
+		.pipe( plumber(plumberErrorHandler))
 		.pipe( sass( scss.sassOpts ) )
+		.pipe( gulp.dest( scss.outCss ) )
+		.pipe( minifyCSS() )
+		.pipe( rename( { suffix: '.min' }))
 		.pipe( gulp.dest( scss.out ) )
-		.pipe( gulp.copy() )
 		.pipe( livereload() );
 });
 
-/* minify output sass / css */
-gulp.task( 'minifycss', function(){
-	return gulp.src( scss.outputFile )
-		.pipe( minifyCSS() )
-		.pipe( rename({ suffix: '.min' } ) )
-		.pipe( gulp.dest( scss.out ) );
-});
-
-/* task : js hint */
+/**
+ * task : js hint 
+ */
 gulp.task( 'js', function() {
-	gulp.src( [ './node_modules/bootstrap-sass/assets/javascripts/bootstrap.min.js' , './src/js/*.js'] )
+	gulp.src( [ js.bootstrap , js.in ] )
 		.pipe( plumber(plumberErrorHandler))
 		// .pipe( jshint() )
 		// .pipe( jshint.reporter( 'fail' ) )
-		.pipe( concat( 'twcx-scripts.js' ) )
-		.pipe( gulp.dest( './dist/js' ) )
+		.pipe( concat( fileJSOutput ) )
+		.pipe( gulp.dest( js.outJsSource ) )
+		// add uglify here
+		.pipe( uglify() )
+		.pipe( rename( { suffix: '.min' }))
+		.pipe( gulp.dest( js.out ) )
 		.pipe( livereload() );
 });
 
-/* task : imagemin */
+/**
+ * task : imagemin 
+ */
 gulp.task( 'img', function(){
-	gulp.src('./src/img/*.{png,jpg,gif}' )
+	gulp.src( source + 'img/*.{png,jpg,gif}' )
 		.pipe( plumber(plumberErrorHandler))
 		.pipe( imagemin({
 			optimizationLevel: 7,
 			progressive: true
 		}))
-		.pipe( gulp.dest('./dist/img'))
+		.pipe( gulp.dest( dest + 'img'))
 		.pipe( livereload() );
 });
 
-/* task : watch */
+/**
+ * task : watch 
+ */
 gulp.task( 'watch', function(){
 	livereload.listen();
 	gulp.watch( scss.watch, ['sass']);
-	gulp.watch('src/js/*.js', ['js'] );
-	gulp.watch('src/img/*.{png,jpg,gif}', ['img']);
+	gulp.watch( js.watch, ['js'] );
+	gulp.watch( source+ 'img/*.{png,jpg,gif}', ['img']);
 });
 
+/** 
+ * default task 
+ */
 gulp.task( 'default', ['sass', 'js', 'img', 'watch'] );

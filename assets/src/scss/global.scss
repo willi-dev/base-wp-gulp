@@ -1,0 +1,15 @@
+/**	
+ * GLOBAL STYLES
+ */
+
+.twcx{
+	&-headline{
+		font-family: $dinbold;
+	}
+	&-subheadline{
+		font-family: $dinmedium;
+	}
+	&-paragraph{
+		font-family: $dinlight;
+	}
+}
